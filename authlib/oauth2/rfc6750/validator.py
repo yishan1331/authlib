@@ -31,9 +31,31 @@ class BearerTokenValidator(TokenValidator):
         """Check if token is active and matches the requested scopes."""
         if not token:
             raise InvalidTokenError(realm=self.realm, extra_attributes=self.extra_attributes)
-        if token.is_expired():
+
+        #===========Yishan add===========
+        #MSG : check token is from redis or mysql
+        # token hasattr 'is_expired' means from mysql and has is_expired function
+        # token doesn't hasattr 'is_expired' means from redis and this token key not expired no need to check again
+        if hasattr(token, 'is_expired') and token.is_expired():
             raise InvalidTokenError(realm=self.realm, extra_attributes=self.extra_attributes)
-        if token.is_revoked():
-            raise InvalidTokenError(realm=self.realm, extra_attributes=self.extra_attributes)
-        if self.scope_insufficient(token.get_scope(), scopes):
+        #================================
+
+        #===========Yishan add===========
+        #MSG : check token is from redis or mysql
+        # token has attr 'is_revoked' means from mysql and has is_revoked function
+        # token doesn't hasattr 'is_revoked' means from redis
+        if hasattr(token, 'is_revoked'):
+            if token.is_revoked():
+                raise InvalidTokenError(realm=self.realm, extra_attributes=self.extra_attributes)
+        else:
+            if token['revoked'] == 1:
+                raise InvalidTokenError(realm=self.realm, extra_attributes=self.extra_attributes)
+        #================================
+
+        token_scopes = None
+        if hasattr(token, 'get_scope'):
+            token_scopes = token.get_scope()
+        else:
+            token_scopes = token['scope']
+        if self.scope_insufficient(token_scopes, scopes):
             raise InsufficientScopeError()
