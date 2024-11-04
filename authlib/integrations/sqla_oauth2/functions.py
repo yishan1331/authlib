@@ -1,4 +1,5 @@
 import time
+from authlib.oauth2.rfc6749 import MaxNumOfSubAccountException
 
 
 def create_query_client_func(session, client_model):
@@ -14,25 +15,39 @@ def create_query_client_func(session, client_model):
     return query_client
 
 
-def create_save_token_func(session, token_model):
+def create_save_token_func(session, token_model, client_model=None):
     """Create an ``save_token`` function that can be used in authorization
     server.
 
     :param session: SQLAlchemy session
     :param token_model: Token model class
+    :param client_model: Client model class (Yishan add)
     """
     def save_token(token, request):
+        user_id = None
         if request.user:
             user_id = request.user.get_user_id()
-        else:
-            user_id = None
         client = request.client
+        if user_id is None:
+            user_id = client.user_id
         item = token_model(
             client_id=client.client_id,
             user_id=user_id,
             **token
         )
+
+        #Yishan add check sub_account_counts number
+        q = session.query(client_model).join(client_model.oauth2_user)\
+            .filter(client_model.client_id == client.client_id,\
+                client_model.client_secret == client.client_secret).first()
+        num_sub_account = q.oauth2_user.num_sub_account
+        if q.sub_account_counts == num_sub_account:
+            raise MaxNumOfSubAccountException()
+
         session.add(item)
+        #Yishan add update sub_account_counts +1
+        q.sub_account_counts += 1
+
         session.commit()
     return save_token
 
@@ -73,6 +88,7 @@ def create_revocation_endpoint(session, token_model):
             return query_token(token, token_type_hint)
 
         def revoke_token(self, token, request):
+            #mysql
             now = int(time.time())
             hint = request.form.get('token_type_hint')
             token.access_token_revoked_at = now
@@ -84,12 +100,13 @@ def create_revocation_endpoint(session, token_model):
     return _RevocationEndpoint
 
 
-def create_bearer_token_validator(session, token_model):
+def create_bearer_token_validator(session, token_model, client_model):
     """Create an bearer token validator class with SQLAlchemy session
     and token model.
 
     :param session: SQLAlchemy session
     :param token_model: Token model class
+    :param client_model: Client model class (Yishan add)
     """
     from authlib.oauth2.rfc6750 import BearerTokenValidator
 

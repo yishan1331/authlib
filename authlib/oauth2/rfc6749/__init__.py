@@ -28,6 +28,9 @@ from .errors import (
     MissingTokenException,
     MissingTokenTypeException,
     MismatchingStateException,
+
+    # Yishan add
+    MaxNumOfSubAccountException,
 )
 from .models import ClientMixin, AuthorizationCodeMixin, TokenMixin
 from .authenticate_client import ClientAuthentication
