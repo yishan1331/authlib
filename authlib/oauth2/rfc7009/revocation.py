@@ -30,7 +30,10 @@ class RevocationEndpoint(TokenEndpoint):
         self.check_params(request, client)
         token = self.query_token(request.form['token'], request.form.get('token_type_hint'))
         if token and not token.check_client(client):
-            raise InvalidGrantError()
+            #===========Yishan add===========
+            # MSG: add description
+            raise InvalidGrantError(description='This access token does not match the client.')
+            #================================
         return token
 
     def check_params(self, request, client):
