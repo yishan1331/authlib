@@ -100,4 +100,20 @@ def _validate_client(query_client, client_id, state=None, status_code=400):
     if not client:
         raise InvalidClientError(state=state, status_code=status_code)
 
+    # ===========Yishan add===========
+    # MSG: check client expired
+    if _validate_client_expired(client):
+        raise InvalidClientError(state=state, status_code=status_code)
+    # ================================
+
     return client
+
+#===========Yishan add===========
+def _validate_client_expired(client, isupdate=False):
+    import time
+    if not isupdate:
+        if client.client_secret_expires_at == 0:
+            return False
+        return client.client_id_issued_at+client.client_secret_expires_at < time.time()
+    return False
+#================================
