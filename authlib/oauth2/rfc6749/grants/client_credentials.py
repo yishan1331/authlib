@@ -95,7 +95,15 @@ class ClientCredentialsGrant(BaseGrant, TokenEndpointMixin):
 
         :returns: (status_code, body, headers)
         """
-        token = self.generate_token(scope=self.request.scope, include_refresh_token=False)
+        #===========Yishan add===========
+        # MSG: checking self.request.scope
+        request_scope = self.request.scope
+        # 表示收到的request沒有scope參數或scope為''
+        if request_scope is None or request_scope == '':
+            # 將token scope預設成client的scpoe
+            request_scope = self.request.client.scope
+        #================================
+        token = self.generate_token(scope=request_scope, include_refresh_token=False)
         log.debug('Issue token %r to %r', token, self.client)
         self.save_token(token)
         self.execute_hook('process_token', self, token=token)

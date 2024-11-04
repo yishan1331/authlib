@@ -43,7 +43,7 @@ class AuthorizationServer:
         :param client: the client that making the request.
         :param user: current authorized user.
         :param expires_in: if provided, use this value as expires_in.
-        :param scope: current requested scope.
+        :param scope: current requested scope. (Yishan add)If the current requested scope is None or an empty string, use the client's scope(client_metadata.scope) to replace it.
         :param include_refresh_token: should refresh_token be included.
         :return: Token dict
         """
