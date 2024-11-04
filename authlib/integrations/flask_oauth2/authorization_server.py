@@ -76,6 +76,11 @@ class AuthorizationServer(_AuthorizationServer):
 
     def handle_response(self, status_code, payload, headers):
         if isinstance(payload, dict):
+            #===========Yishan add===========
+            #MSG: for assort -> Response:ok
+            if status_code == 200:
+                payload.update({"Response":"ok"})
+            #================================
             payload = json.dumps(payload)
         return Response(payload, status=status_code, headers=headers)
 
