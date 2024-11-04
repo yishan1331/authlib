@@ -147,6 +147,10 @@ def create_token_expires_in_generator(expires_in_conf=None):
         data.update(expires_in_conf)
 
     def expires_in(client, grant_type):
+        #===========Yishan add===========
+        #MSG: Update the new configuration(from api calling) for BearerTokenGenerator.GRANT_TYPES_EXPIRES_IN
+        data.update(BearerTokenGenerator.GRANT_TYPES_EXPIRES_IN)
+        #================================
         return data.get(grant_type, BearerTokenGenerator.DEFAULT_EXPIRES_IN)
 
     return expires_in
