@@ -4,6 +4,9 @@ from ..rfc6749 import (
     InvalidRequestError,
     UnsupportedTokenTypeError,
 )
+from ..rfc6750 import (
+    InvalidTokenError
+)
 
 
 class RevocationEndpoint(TokenEndpoint):
@@ -34,6 +37,12 @@ class RevocationEndpoint(TokenEndpoint):
             # MSG: add description
             raise InvalidGrantError(description='This access token does not match the client.')
             #================================
+
+        #===========Yishan add===========
+        # MSG: add check token
+        if not token:
+            raise InvalidTokenError()
+        #================================
         return token
 
     def check_params(self, request, client):
