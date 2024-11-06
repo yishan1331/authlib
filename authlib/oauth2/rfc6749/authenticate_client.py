@@ -21,7 +21,7 @@ from .util import extract_basic_authorization
 
 log = logging.getLogger(__name__)
 
-__all__ = ['ClientAuthentication']
+__all__ = ['ClientAuthentication', 'validate_client']
 
 
 class ClientAuthentication:
@@ -58,7 +58,7 @@ def authenticate_client_secret_basic(query_client, request):
     """
     client_id, client_secret = extract_basic_authorization(request.headers)
     if client_id and client_secret:
-        client = _validate_client(query_client, client_id, request.state, 401)
+        client = validate_client(query_client, client_id, request.state, 401)
         if client.check_client_secret(client_secret):
             log.debug(f'Authenticate {client_id} via "client_secret_basic" success')
             return client
@@ -73,7 +73,7 @@ def authenticate_client_secret_post(query_client, request):
     client_id = data.get('client_id')
     client_secret = data.get('client_secret')
     if client_id and client_secret:
-        client = _validate_client(query_client, client_id, request.state)
+        client = validate_client(query_client, client_id, request.state)
         if client.check_client_secret(client_secret):
             log.debug(f'Authenticate {client_id} via "client_secret_post" success')
             return client
@@ -86,7 +86,7 @@ def authenticate_none(query_client, request):
     """
     client_id = request.client_id
     if client_id and not request.data.get('client_secret'):
-        client = _validate_client(query_client, client_id, request.state)
+        client = validate_client(query_client, client_id, request.state)
         log.debug(f'Authenticate {client_id} via "none" success')
         return client
     log.debug(f'Authenticate {client_id} via "none" failed')
@@ -110,10 +110,7 @@ def _validate_client(query_client, client_id, state=None, status_code=400):
 
 #===========Yishan add===========
 def _validate_client_expired(client, isupdate=False):
-    import time
     if not isupdate:
-        if client.client_secret_expires_at == 0:
-            return False
-        return client.client_id_issued_at+client.client_secret_expires_at < time.time()
+        return client.is_expired()
     return False
 #================================

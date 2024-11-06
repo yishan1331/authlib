@@ -1,4 +1,4 @@
-import secrets
+import secrets, time
 
 from sqlalchemy import Column, String, Text, Integer
 from authlib.common.encoding import json_loads, json_dumps
@@ -136,3 +136,11 @@ class OAuth2ClientMixin(ClientMixin):
 
     def check_grant_type(self, grant_type):
         return grant_type in self.grant_types
+    
+    #===========Yishan add===========
+    def is_expired(self):
+        if not self.client_secret_expires_at:
+            return False
+        expires_at = self.client_id_issued_at + self.client_secret_expires_at
+        return expires_at < time.time()
+    #================================

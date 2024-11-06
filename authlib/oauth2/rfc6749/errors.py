@@ -42,7 +42,7 @@ __all__ = [
     'MissingAuthorizationError', 'UnsupportedTokenTypeError',
     'MissingCodeException', 'MissingTokenException',
     'MissingTokenTypeException', 'MismatchingStateException',
-    'MaxNumOfSubAccountException'
+    'MaxNumReachedException'
 ]
 
 
@@ -234,7 +234,6 @@ class MismatchingStateException(OAuth2Error):
     description = 'CSRF Warning! State not equal in request and response.'
 
 #===========Yishan add===========
-class MaxNumOfSubAccountException(OAuth2Error):
-    error = 'maximun_number_sub_account'
-    description = 'The maximum number of sub-accounts has been reached.'
+class MaxNumReachedException(OAuth2Error):
+    error = 'maximun_number_reached'
 #================================

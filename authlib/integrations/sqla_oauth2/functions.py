@@ -1,8 +1,7 @@
 import time, json
 from authlib.oauth2.rfc6750 import BearerTokenGenerator
 from authlib.oauth2.rfc6749 import InvalidClientError
-from authlib.oauth2.rfc6749 import MaxNumOfSubAccountException
-
+from authlib.oauth2.rfc6749 import MaxNumReachedException, validate_client
 
 def create_query_client_func(session, client_model):
     """Create an ``query_client`` function that can be used in authorization
@@ -39,17 +38,18 @@ def create_save_token_func(session, token_model, client_model=None, Yishan_dbRed
             **token
         )
 
-        #Yishan add check sub_account_counts number
+        #Yishan add check sub_accounts_num number
         q = session.query(client_model).join(client_model.oauth2_user)\
             .filter(client_model.client_id == client.client_id,\
                 client_model.client_secret == client.client_secret).first()
-        num_sub_account = q.oauth2_user.num_sub_account
-        if q.sub_account_counts == num_sub_account:
-            raise MaxNumOfSubAccountException()
+        total_num_sub_accounts = q.oauth2_user.total_num_sub_accounts
+        if q.sub_accounts_num == total_num_sub_accounts:
+            raise MaxNumReachedException(description='The maximum number of sub-accounts has been reached.')
 
         session.add(item)
-        #Yishan add update sub_account_counts +1
-        q.sub_account_counts += 1
+
+        #Yishan add update sub_accounts_num +1
+        q.sub_accounts_num += 1
 
         session.commit()
 
@@ -140,28 +140,39 @@ def create_bearer_token_validator(session, token_model, client_model, Yishan_dbR
     class _BearerTokenValidator(BearerTokenValidator):
         def authenticate_token(self, token_string):
             #===========Yishan add===========
-            return self._token_from_redis(token_string)
+            token = self._get_token_from_redis(token_string)
             #================================
-            # q = session.query(token_model)
-            # return q.filter_by(access_token=token_string).first()
+            # token = session.query(token_model).filter_by(access_token=token_string).first()
+
+            #===========Yishan add===========
+            # MSG : check client secret is_expired
+            # token hasattr 'check_client', 'get_client_id' means from mysql and has check_client, get_client_id function
+            # token doesn't hasattr 'check_client', 'get_client_id' means from redis
+            if hasattr(token, 'check_client') and hasattr(token, 'get_client_id'):
+                token_client_id = token.get_client_id()
+                query_client = create_query_client_func(session, client_model)
+                validate_client(query_client, token_client_id, status_code=401)
+            elif token:
+                #Yishan add token existed need to check client secret is legal
+                if token["client_id_issued_at"]+token["client_secret_expires_at"] < time.time():
+                    self._token_has_expired(token["user_id"], token_string)
+                    raise InvalidClientError(state=None, status_code=400)
+            #================================
+
+            return token
 
         #===========Yishan add===========
-        def _token_from_redis(self, token_string):
+        def _get_token_from_redis(self, token_string):
             if Yishan_dbRedis.exists(token_string):
-                this_token = json.loads(Yishan_dbRedis.get(token_string))
-                #Yishan add token existed need to check client secret is legal
-                if this_token["client_id_issued_at"]+this_token["client_secret_expires_at"] < time.time():
-                    self._client_token_expired(this_token["user_id"], token_string)
-                    raise InvalidClientError(state=None, status_code=400)
                 return json.loads(Yishan_dbRedis.get(token_string))
 
-            #Yishan add update sub_account_counts -1
+            #Yishan add update sub_accounts_num -1
             user_id = session.query(token_model.user_id).filter_by(access_token=token_string).first()
-            if user_id: self._client_token_expired(user_id[0], token_string)
+            if user_id: self._token_has_expired(user_id[0], token_string)
             return False
-        
-        def _client_token_expired(self, user_id, token_string):
-            session.query(client_model).filter(client_model.user_id == user_id).update({client_model.sub_account_counts : client_model.sub_account_counts - 1})
+
+        def _token_has_expired(self, user_id, token_string):
+            session.query(client_model).filter(client_model.user_id == user_id).update({client_model.sub_accounts_num : client_model.sub_accounts_num - 1})
             session.query(token_model).filter_by(access_token=token_string).delete()
             session.commit()
             if Yishan_dbRedis.exists(token_string): Yishan_dbRedis.delete(token_string)

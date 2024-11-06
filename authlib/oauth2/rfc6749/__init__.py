@@ -30,10 +30,10 @@ from .errors import (
     MismatchingStateException,
 
     # Yishan add
-    MaxNumOfSubAccountException,
+    MaxNumReachedException,
 )
 from .models import ClientMixin, AuthorizationCodeMixin, TokenMixin
-from .authenticate_client import ClientAuthentication
+from .authenticate_client import ClientAuthentication, validate_client
 from .authorization_server import AuthorizationServer
 from .resource_protector import ResourceProtector, TokenValidator
 from .token_endpoint import TokenEndpoint
@@ -70,6 +70,7 @@ __all__ = [
     'MismatchingStateException',
     'ClientMixin', 'AuthorizationCodeMixin', 'TokenMixin',
     'ClientAuthentication',
+    'validate_client',
     'AuthorizationServer',
     'ResourceProtector',
     'TokenValidator',

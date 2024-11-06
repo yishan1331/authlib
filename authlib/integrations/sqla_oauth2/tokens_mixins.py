@@ -53,6 +53,9 @@ class OAuth2TokenMixin(TokenMixin):
     def check_client(self, client):
         return self.client_id == client.get_client_id()
 
+    def get_client_id(self):
+        return self.client_id
+
     def get_scope(self):
         return self.scope
 
