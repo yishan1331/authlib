@@ -102,6 +102,7 @@ def create_revocation_endpoint(session, token_model, Yishan_dbRedis):
     query_token = create_query_token_func(session, token_model)
 
     class _RevocationEndpoint(RevocationEndpoint):
+
         def query_token(self, token, token_type_hint):
             return query_token(token, token_type_hint)
 
@@ -179,3 +180,25 @@ def create_bearer_token_validator(session, token_model, client_model, Yishan_dbR
         #================================
 
     return _BearerTokenValidator
+
+#===========Yishan add===========
+def update_client_secret_func(session, client_model):
+
+    def update_client_secret(request):
+        client = request.client
+
+        #Yishan add check client_secret_updating_times number
+        q = session.query(client_model).join(client_model.oauth2_user)\
+            .filter(client_model.client_id == client.client_id,\
+                client_model.client_secret == client.client_secret).first()
+        total_client_secret_updating_times = q.oauth2_user.total_client_secret_updating_times
+        if q.client_secret_updating_times == total_client_secret_updating_times:
+            raise MaxNumReachedException(description='The maximum number of client secret updates has been reached.')
+
+        #Yishan add update client_secret_updating_times +1 & client_id_issued_at now
+        q.client_id_issued_at = int(time.time())
+        q.client_secret_updating_times += 1
+        session.commit()
+
+    return update_client_secret
+#================================

@@ -35,6 +35,10 @@ class AuthorizationServer:
         """Define function to save the generated token into database."""
         raise NotImplementedError()
 
+    def update_client_secret(self, request):
+        """Define function to update the client secret and save into database."""
+        raise NotImplementedError()
+
     def generate_token(self, grant_type, client, user=None, scope=None,
                        expires_in=None, include_refresh_token=True):
         """Generate the token dict.
@@ -84,13 +88,14 @@ class AuthorizationServer:
         """
         self._token_generators[grant_type] = func
 
-    def authenticate_client(self, request, methods, endpoint='token'):
+    #Yishan add params: for_update_client_secret
+    def authenticate_client(self, request, methods, endpoint='token', for_update_client_secret=False):
         """Authenticate client via HTTP request information with the given
         methods, such as ``client_secret_basic``, ``client_secret_post``.
         """
         if self._client_auth is None and self.query_client:
             self._client_auth = ClientAuthentication(self.query_client)
-        return self._client_auth(request, methods, endpoint)
+        return self._client_auth(request, methods, endpoint=endpoint, for_update_client_secret=for_update_client_secret)
 
     def register_client_auth_method(self, method, func):
         """Add more client auth method. The default methods are:
@@ -289,6 +294,26 @@ class AuthorizationServer:
             return self.handle_response(*args)
         except OAuth2Error as error:
             return self.handle_error_response(request, error)
+    
+    #===========Yishan add===========
+    def create_updating_client_secret_response(self, request=None):
+        """Validate client_id & client_secret and update client_secret times.
+
+        :param request: HTTP request instance
+        """
+        request = self.create_oauth2_request(request)
+        try:
+            grant = self.get_token_grant(request)
+        except InvalidGrantError as error:
+            return self.handle_error_response(request, error)
+        
+        try:
+            grant.validate_token_request(for_update_client_secret=True)
+            args = grant.update_client_secret_times()
+            return self.handle_response(*args)
+        except OAuth2Error as error:
+            return self.handle_error_response(request, error)
+    #================================
 
     def handle_error_response(self, request, error):
         return self.handle_response(*error(self.get_error_uri(request, error)))

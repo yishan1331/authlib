@@ -46,7 +46,8 @@ class BaseGrant:
             include_refresh_token=include_refresh_token,
         )
 
-    def authenticate_token_endpoint_client(self):
+    # Yishan add params: for_update_client_secret
+    def authenticate_token_endpoint_client(self, for_update_client_secret=False):
         """Authenticate client with the given methods for token endpoint.
 
         For example, the client makes the following HTTP request using TLS:
@@ -67,7 +68,8 @@ class BaseGrant:
         :return: client
         """
         client = self.server.authenticate_client(
-            self.request, self.TOKEN_ENDPOINT_AUTH_METHODS)
+            self.request, self.TOKEN_ENDPOINT_AUTH_METHODS,
+            for_update_client_secret=for_update_client_secret)
         self.server.send_signal(
             'after_authenticate_client',
             client=client, grant=self)
@@ -76,6 +78,12 @@ class BaseGrant:
     def save_token(self, token):
         """A method to save token into database."""
         return self.server.save_token(token, self.request)
+    
+    #===========Yishan add===========
+    def update_client_secret(self):
+        """A method to update client secret and save into database."""
+        return self.server.update_client_secret(self.request)
+    #================================
 
     def validate_requested_scope(self):
         """Validate if requested scope is supported by Authorization Server."""

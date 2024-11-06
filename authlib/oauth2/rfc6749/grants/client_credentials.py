@@ -27,7 +27,8 @@ class ClientCredentialsGrant(BaseGrant, TokenEndpointMixin):
     """
     GRANT_TYPE = 'client_credentials'
 
-    def validate_token_request(self):
+    # Yishan add params: for_update_client_secret
+    def validate_token_request(self, for_update_client_secret=False):
         """The client makes a request to the token endpoint by adding the
         following parameters using the "application/x-www-form-urlencoded"
         format per Appendix B with a character encoding of UTF-8 in the HTTP
@@ -61,7 +62,7 @@ class ClientCredentialsGrant(BaseGrant, TokenEndpointMixin):
 
         # ignore validate for grant_type, since it is validated by
         # check_token_endpoint
-        client = self.authenticate_token_endpoint_client()
+        client = self.authenticate_token_endpoint_client(for_update_client_secret=for_update_client_secret)
         log.debug('Validate token request of %r', client)
 
         if not client.check_grant_type(self.GRANT_TYPE):
@@ -108,3 +109,10 @@ class ClientCredentialsGrant(BaseGrant, TokenEndpointMixin):
         self.save_token(token)
         self.execute_hook('process_token', self, token=token)
         return 200, token, self.TOKEN_RESPONSE_HEADER
+
+    #===========Yishan add===========
+    def update_client_secret_times(self):
+        self.update_client_secret()
+        return 200, {"Response":"success"}, self.TOKEN_RESPONSE_HEADER
+    #================================
+

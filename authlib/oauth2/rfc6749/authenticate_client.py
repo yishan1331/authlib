@@ -36,10 +36,11 @@ class ClientAuthentication:
     def register(self, method, func):
         self._methods[method] = func
 
-    def authenticate(self, request, methods, endpoint):
+    #Yishan add params: for_update_client_secret
+    def authenticate(self, request, methods, endpoint, for_update_client_secret=False):
         for method in methods:
             func = self._methods[method]
-            client = func(self.query_client, request)
+            client = func(self.query_client, request, for_update_client_secret=for_update_client_secret)
             if client and client.check_endpoint_auth_method(method, endpoint):
                 request.auth_method = method
                 return client
@@ -48,17 +49,18 @@ class ClientAuthentication:
             raise InvalidClientError(state=request.state, status_code=401)
         raise InvalidClientError(state=request.state)
 
-    def __call__(self, request, methods, endpoint='token'):
-        return self.authenticate(request, methods, endpoint)
+    def __call__(self, request, methods, endpoint='token', for_update_client_secret=False):
+        return self.authenticate(request, methods, endpoint, for_update_client_secret=for_update_client_secret)
 
 
-def authenticate_client_secret_basic(query_client, request):
+#Yishan add params: for_update_client_secret
+def authenticate_client_secret_basic(query_client, request, for_update_client_secret=False):
     """Authenticate client by ``client_secret_basic`` method. The client
     uses HTTP Basic for authentication.
     """
     client_id, client_secret = extract_basic_authorization(request.headers)
     if client_id and client_secret:
-        client = validate_client(query_client, client_id, request.state, 401)
+        client = validate_client(query_client, client_id, state=request.state, status_code=401, for_update_client_secret=for_update_client_secret)
         if client.check_client_secret(client_secret):
             log.debug(f'Authenticate {client_id} via "client_secret_basic" success')
             return client
@@ -91,8 +93,8 @@ def authenticate_none(query_client, request):
         return client
     log.debug(f'Authenticate {client_id} via "none" failed')
 
-
-def _validate_client(query_client, client_id, state=None, status_code=400):
+#Yishan add params: for_update_client_secret and make this feature public.
+def validate_client(query_client, client_id, state=None, status_code=400, for_update_client_secret=False):
     if client_id is None:
         raise InvalidClientError(state=state, status_code=status_code)
 
@@ -102,15 +104,15 @@ def _validate_client(query_client, client_id, state=None, status_code=400):
 
     # ===========Yishan add===========
     # MSG: check client expired
-    if _validate_client_expired(client):
+    if _validate_client_expired(client, for_update_client_secret=for_update_client_secret):
         raise InvalidClientError(state=state, status_code=status_code)
     # ================================
 
     return client
 
 #===========Yishan add===========
-def _validate_client_expired(client, isupdate=False):
-    if not isupdate:
+def _validate_client_expired(client, for_update_client_secret=False):
+    if not for_update_client_secret:
         return client.is_expired()
     return False
 #================================

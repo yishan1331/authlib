@@ -12,7 +12,7 @@ from .signals import client_authenticated, token_revoked
 
 class AuthorizationServer(_AuthorizationServer):
     """Flask implementation of :class:`authlib.oauth2.rfc6749.AuthorizationServer`.
-    Initialize it with ``query_client``, ``save_token`` methods and Flask
+    Initialize it with ``query_client``, ``save_token``, ``update_client_secret``(Yishan add) methods and Flask
     app instance::
 
         def query_client(client_id):
@@ -38,20 +38,23 @@ class AuthorizationServer(_AuthorizationServer):
         server.init_app(app, query_client, save_token)
     """
 
-    def __init__(self, app=None, query_client=None, save_token=None):
+    def __init__(self, app=None, query_client=None, save_token=None, update_client_secret=None):
         super().__init__()
         self._query_client = query_client
         self._save_token = save_token
+        self._update_client_secret = update_client_secret
         self._error_uris = None
         if app is not None:
             self.init_app(app)
 
-    def init_app(self, app, query_client=None, save_token=None):
+    def init_app(self, app, query_client=None, save_token=None, update_client_secret=None):
         """Initialize later with Flask app instance."""
         if query_client is not None:
             self._query_client = query_client
         if save_token is not None:
             self._save_token = save_token
+        if update_client_secret is not None:
+            self._update_client_secret = update_client_secret
 
         self.register_token_generator('default', self.create_bearer_token_generator(app.config))
         self.scopes_supported = app.config.get('OAUTH2_SCOPES_SUPPORTED')
@@ -62,6 +65,9 @@ class AuthorizationServer(_AuthorizationServer):
 
     def save_token(self, token, request):
         return self._save_token(token, request)
+
+    def update_client_secret(self, request):
+        return self._update_client_secret(request)
 
     def get_error_uri(self, request, error):
         if self._error_uris:
